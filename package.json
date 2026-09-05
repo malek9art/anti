@@ -1,0 +1,38 @@
+{
+  "name": "himaya",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "حماية | نظام مكافحة سرقة الأجهزة",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && cross-env VITE_ROUTER_MODE=hash vite build",
+    "build:pages": "cross-env VITE_ROUTER_MODE=hash vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "check:sql": "node scripts/check-sql-balance.mjs",
+    "sql:bundle": "node scripts/bundle-migrations.mjs",
+    "sql:verify": "node scripts/bundle-migrations.mjs --check && node scripts/build-setup-sql.mjs --check",
+    "check:pwa": "node scripts/check-pwa.mjs",
+    "verify": "npm run check:secrets && npm run check:sql && npm run sql:verify && npm run typecheck && npm run test && npm run build && npm run check:pwa",
+    "sql:setup": "node scripts/build-setup-sql.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "cross-env": "^7.0.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.9",
+    "vitest": "^2.1.3"
+  }
+}
