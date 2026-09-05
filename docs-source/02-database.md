@@ -8,14 +8,24 @@
 2. الصق كامل محتوى [`supabase/scripts/reset_all_objects.sql`](../supabase/scripts/reset_all_objects.sql).
 3. اضغط **Run**. السكربت Idempotent — يمكن تكراره بأمان.
 
-## ب) تشغيل المخطط
+## ب) تشغيل المخطط (الطريقة الموصى بها)
+
+استخدم ملف التهيئة الجاهز الذي **ينفّذ المخطط ويربط مدير النظام معًا**:
 
 1. افتح **SQL Editor → New query**.
-2. الصق كامل محتوى [`supabase/schema.sql`](../supabase/schema.sql)
-   (ملف واحد مدمج آليًا من `supabase/migrations/`).
+2. الصق كامل محتوى [`supabase/SETUP.sql`](../supabase/SETUP.sql).
 3. اضغط **Run**.
 
-النتيجة المتوقعة: `Success. No rows returned`.
+النتيجة المتوقعة: جدول تحقق نهائي يوضّح كل فحص وقيمته المتوقعة.
+
+> ⚠️ **شرط مسبق**: يجب أن يكون حساب المدير موجودًا في `auth.users` قبل التشغيل.
+> سجّل الحساب من شاشة الدخول في التطبيق، أو أنشئه من
+> **Supabase → Authentication → Users**. إن لم يوجد سيتوقف السكربت برسالة عربية واضحة.
+
+### بديل: المخطط وحده
+
+إن أردت المخطط دون ربط أي مستخدم، استخدم [`supabase/schema.sql`](../supabase/schema.sql)،
+ثم اربط المدير لاحقًا عبر [`supabase/scripts/link_admin_user.sql`](../supabase/scripts/link_admin_user.sql).
 
 ## ج) التحقق السريع
 
@@ -39,7 +49,8 @@ where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity;
 `supabase/migrations/` هو المصدر. الملف المدمج يُولَّد بـ:
 
 ```bash
-npm run sql:bundle
+npm run sql:bundle   # يولّد supabase/schema.sql
+npm run sql:setup    # يولّد supabase/SETUP.sql (المخطط + ربط المدير + التحقق)
 ```
 
-و`npm run verify` يفشل إذا كان الملف المدمج غير متزامن مع المجلد.
+و`npm run verify` يفشل إذا كان أي من الملفين غير متزامن مع المجلد.

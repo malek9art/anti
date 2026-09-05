@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { callFunction, errorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { MfaRequiredState } from '../components/States';
+import { BrandingManager } from '../components/BrandingManager';
 
 const KNOWN = [
   { key: 'mfa_required_for_sensitive', label: 'اشتراط AAL2 للعمليات الحساسة', hint: 'true أو false' },
@@ -43,6 +44,10 @@ export function Settings() {
       {!isAal2 ? <MfaRequiredState /> : null}
       {msg ? <div className="alert alert--ok" role="status">{msg}</div> : null}
       {error ? <div className="alert alert--error" role="alert">{error}</div> : null}
+
+      <div style={{ marginBottom: 16 }}>
+        <BrandingManager />
+      </div>
 
       <section className="card" style={{ maxWidth: 560 }}>
         <div className="card__body">

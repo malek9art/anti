@@ -32,6 +32,7 @@
 | [`docs-source/05-deploy-pages.md`](docs-source/05-deploy-pages.md) | النشر على GitHub Pages |
 | [`docs-source/06-security.md`](docs-source/06-security.md) | الثوابت الأمنية |
 | [`docs-source/07-troubleshooting.md`](docs-source/07-troubleshooting.md) | استكشاف الأعطال |
+| [`docs-source/08-branding.md`](docs-source/08-branding.md) | الشعار والهوية البصرية |
 | [`docs-source/workflows/README.md`](docs-source/workflows/README.md) | تفعيل أعمال GitHub Actions |
 
 ## أوامر سريعة
@@ -40,6 +41,7 @@
 npm install
 npm run dev        # تشغيل محلي
 npm run verify     # بوابة الجودة الكاملة
+npm run sql:setup  # توليد supabase/SETUP.sql (تهيئة كاملة جاهزة للتنفيذ اليدوي)
 npm run sql:bundle # دمج migrations في supabase/schema.sql
 ```
 
@@ -62,6 +64,8 @@ npm run sql:bundle # دمج migrations في supabase/schema.sql
 
 ## الشعار
 
-الشعار الرسمي في `public/logo.png` (PNG بخلفية شفافة)، ويُستخدم عبر مكوّن واحد
-`src/components/Logo.tsx` في الهيدر وشاشة الدخول ولوحة التحكم والتقارير والطباعة.
+**يُرفع ويُدار من لوحة الإدارة** (إعدادات النظام ← الهوية البصرية) — بلا تعديل كود
+ولا إعادة بناء. يظهر تلقائيًا في شاشة الدخول والشريط الجانبي والهيدر ولوحة التحكم
+والتقارير وصفحات الطباعة. التفاصيل في [`docs-source/08-branding.md`](docs-source/08-branding.md).
+
 ألوان الهوية: الأخضر الداكن `#0B3D2E` والذهبي `#C9A24D` والأبيض.

@@ -14,9 +14,10 @@
     "check:secrets": "node scripts/check-secrets.mjs",
     "check:sql": "node scripts/check-sql-balance.mjs",
     "sql:bundle": "node scripts/bundle-migrations.mjs",
-    "sql:verify": "node scripts/bundle-migrations.mjs --check",
+    "sql:verify": "node scripts/bundle-migrations.mjs --check && node scripts/build-setup-sql.mjs --check",
     "check:pwa": "node scripts/check-pwa.mjs",
-    "verify": "npm run check:secrets && npm run check:sql && npm run sql:verify && npm run typecheck && npm run test && npm run build && npm run check:pwa"
+    "verify": "npm run check:secrets && npm run check:sql && npm run sql:verify && npm run typecheck && npm run test && npm run build && npm run check:pwa",
+    "sql:setup": "node scripts/build-setup-sql.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

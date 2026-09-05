@@ -1,6 +1,24 @@
--- ملف المخطط المدمج — مولّد آليًا من supabase/migrations
--- لا تعدّله يدويًا. شغّل: npm run sql:bundle
--- الملفات المدمجة: 15
+-- ============================================================================
+--  حماية | نظام مكافحة سرقة الأجهزة
+--  ملف التهيئة الكامل لقاعدة البيانات — جاهز للتنفيذ اليدوي
+-- ============================================================================
+--  الاستخدام:
+--    1. افتح Supabase → SQL Editor → New query
+--    2. الصق هذا الملف بالكامل
+--    3. اضغط Run
+--
+--  ملاحظات:
+--    • السكربت Idempotent — تشغيله أكثر من مرة آمن.
+--    • إن أردت البدء من الصفر، شغّل أولًا:
+--      supabase/scripts/reset_all_objects.sql
+--    • يربط تلقائيًا مستخدم الإدارة:
+--      alahmdyalahmdyalahmdy13@gmail.com
+--      (يجب أن يكون موجودًا في auth.users قبل التشغيل)
+--
+--  مولّد آليًا من supabase/migrations — لا تعدّله يدويًا.
+--  لإعادة التوليد: npm run sql:setup
+--  عدد ملفات المخطط المدمجة: 15
+-- ============================================================================
 
 
 -- ==================== 0001_extensions_and_enums.sql ====================
@@ -54,7 +72,6 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   create type public.access_level as enum ('public','restricted','confidential','secret');
 exception when duplicate_object then null; end $$;
-
 
 -- ==================== 0002_identity_tables.sql ====================
 -- 0002: الهوية والصلاحيات والجهات والمحلات
@@ -173,7 +190,6 @@ create index if not exists idx_user_roles_user on public.user_roles(user_id);
 create index if not exists idx_shop_users_user on public.shop_users(user_id);
 create index if not exists idx_shops_status on public.shops(status);
 
-
 -- ==================== 0003_device_tables.sql ====================
 -- 0003: الأجهزة
 create table if not exists public.devices (
@@ -233,7 +249,6 @@ create table if not exists public.device_status_transitions (
 
 create index if not exists idx_device_imeis_imei on public.device_imeis(imei);
 create index if not exists idx_device_events_device on public.device_events(device_id, created_at desc);
-
 
 -- ==================== 0004_commerce_tables.sql ====================
 -- 0004: التجارة والصيانة
@@ -310,7 +325,6 @@ create index if not exists idx_repair_device on public.repair_records(device_id)
 create index if not exists idx_csd_phone_hash on public.customer_sensitive_data(phone_hash);
 create index if not exists idx_csd_nid_hash on public.customer_sensitive_data(national_id_hash);
 
-
 -- ==================== 0005_report_tables.sql ====================
 -- 0005: بلاغات السرقة والأدلة
 create table if not exists public.stolen_reports (
@@ -385,7 +399,6 @@ create table if not exists public.evidence_access_logs (
 create index if not exists idx_reports_status on public.stolen_reports(status);
 create index if not exists idx_reports_imei on public.stolen_reports(imei);
 create index if not exists idx_reports_assigned on public.stolen_reports(assigned_to);
-
 
 -- ==================== 0006_governance_tables.sql ====================
 -- 0006: الرقابة والتدقيق
@@ -470,7 +483,6 @@ create table if not exists public.api_rate_limit_windows (
   request_count int not null default 1
 );
 create unique index if not exists idx_rate_window on public.api_rate_limit_windows(coalesce(subject_id, '00000000-0000-0000-0000-000000000000'::uuid), endpoint, window_start);
-
 
 -- ==================== 0007_core_functions.sql ====================
 -- 0007: الدوال الأساسية (IMEI/Luhn، الصلاحيات، التدقيق المتسلسل)
@@ -643,7 +655,6 @@ begin
 end;
 $$;
 
-
 -- ==================== 0008_append_only_and_state_machine.sql ====================
 -- 0008: append-only وآلة حالات البلاغ
 
@@ -758,7 +769,6 @@ drop trigger if exists trg_reports_validate_imei on public.stolen_reports;
 create trigger trg_reports_validate_imei before insert on public.stolen_reports
 for each row execute function private.validate_report_imei();
 
-
 -- ==================== 0009_rls.sql ====================
 -- 0009: تفعيل RLS بمبدأ المنع افتراضيًا
 do $$
@@ -808,7 +818,6 @@ grant select on public.users, public.notifications, public.roles, public.permiss
 
 -- لا شيء لـ anon
 revoke all on all tables in schema public from anon;
-
 
 -- ==================== 0010_seed_roles_permissions.sql ====================
 -- 0010: بذر الأدوار والصلاحيات (لا بيانات تجريبية ولا حسابات)
@@ -889,7 +898,6 @@ insert into public.system_settings (key, value, description_ar) values
   ('rate_limit_per_minute', '60'::jsonb, 'حد الطلبات في الدقيقة'),
   ('platform_name', '"حماية | نظام مكافحة سرقة الأجهزة"'::jsonb, 'اسم المنصة')
 on conflict (key) do nothing;
-
 
 -- ==================== 0011_operations.sql ====================
 -- 0011: عمليات النظام (SECURITY DEFINER) — كل الكتابة تمر من هنا
@@ -1094,7 +1102,6 @@ begin
   return jsonb_build_object('id', v_id, 'operation_number', v_num);
 end $$;
 
-
 -- ==================== 0012_report_operations.sql ====================
 -- 0012: عمليات البلاغات والإحالة والمتابعة
 
@@ -1275,7 +1282,6 @@ begin
   perform private.append_audit_log(v_actor, 'view_report_detail', 'stolen_report', p_report_id, '{}'::jsonb);
   return jsonb_build_object('report', v_report, 'history', v_history, 'follow_ups', v_follow, 'evidence', v_evidence);
 end $$;
-
 
 -- ==================== 0013_admin_and_queries.sql ====================
 -- 0013: الإدارة والاستعلامات والتخزين
@@ -1680,7 +1686,6 @@ end $$;
 grant execute on all functions in schema public to authenticated;
 revoke execute on all functions in schema public from anon;
 
-
 -- ==================== 0014_storage_and_evidence.sql ====================
 -- 0014: التخزين الخاص والأدلة
 insert into storage.buckets (id, name, public)
@@ -1770,7 +1775,6 @@ end $$;
 
 grant execute on all functions in schema public to authenticated;
 revoke execute on all functions in schema public from anon;
-
 
 -- ==================== 0015_branding.sql ====================
 -- 0015: الهوية البصرية (الشعار) — تُدار من لوحة الإدارة
@@ -1864,3 +1868,122 @@ grant execute on all functions in schema public to authenticated;
 revoke execute on all functions in schema public from anon;
 grant execute on function public.op_get_branding() to anon;
 
+
+-- ============================================================================
+-- ==================== ربط مستخدم الإدارة ====================
+-- ============================================================================
+-- ============================================================================
+-- ربط مستخدم الإدارة
+-- ============================================================================
+-- المستخدم: alahmdyalahmdyalahmdy13@gmail.com
+-- المعرّف : e6088d05-c472-4059-9c0f-3660190bbcb0
+--
+-- شرط مسبق: يجب أن يكون هذا المستخدم موجودًا في auth.users
+--            (سجّل الدخول/الحساب من شاشة التطبيق أولًا، أو أنشئه من
+--             Supabase → Authentication → Users).
+-- السكربت Idempotent: تشغيله أكثر من مرة آمن.
+-- ============================================================================
+
+do $$
+declare
+  v_id    uuid := 'e6088d05-c472-4059-9c0f-3660190bbcb0';
+  v_email text := 'alahmdyalahmdyalahmdy13@gmail.com';
+  v_role  uuid;
+  v_found uuid;
+begin
+  -- 1) التأكد من وجود المستخدم في نظام المصادقة
+  select id into v_found from auth.users where id = v_id;
+
+  if v_found is null then
+    select id into v_found from auth.users where lower(email) = lower(v_email);
+    if v_found is null then
+      raise exception using
+        errcode = 'P0002',
+        message = format('لم يُعثر على المستخدم %s في auth.users', v_email),
+        hint    = 'أنشئ الحساب أولًا من شاشة الدخول في التطبيق أو من Supabase → Authentication → Users، ثم أعد تشغيل هذا السكربت.';
+    end if;
+    raise notice 'تنبيه: المعرّف المُدخل لا يطابق، سيُستخدم المعرّف الفعلي للبريد: %', v_found;
+    v_id := v_found;
+  end if;
+
+  -- 2) إنشاء/تحديث ملف المستخدم في المنصة وتفعيله
+  insert into public.users (id, full_name, email, status)
+  values (v_id, 'مدير النظام', v_email, 'active')
+  on conflict (id) do update
+    set status = 'active',
+        email  = excluded.email,
+        updated_at = now();
+
+  -- 3) إسناد دور مدير النظام (كامل الصلاحيات الـ31)
+  select id into v_role from public.roles where code = 'system_admin';
+  if v_role is null then
+    raise exception 'لم يُعثر على الدور system_admin — نفّذ ملف المخطط الكامل أولًا.'
+      using errcode = 'P0002';
+  end if;
+
+  insert into public.user_roles (user_id, role_id)
+  values (v_id, v_role)
+  on conflict do nothing;
+
+  raise notice '========================================';
+  raise notice 'تم ربط مدير النظام بنجاح';
+  raise notice 'البريد : %', v_email;
+  raise notice 'المعرّف: %', v_id;
+  raise notice 'الدور  : system_admin (31 صلاحية)';
+  raise notice '========================================';
+  raise notice 'الخطوة التالية: سجّل الدخول ثم فعّل المصادقة الثنائية';
+  raise notice 'من صفحة «حسابي والأمان» — بدونها تُرفض العمليات الحساسة.';
+end $$;
+
+-- التحقق من النتيجة
+select
+  u.email                                   as "البريد",
+  u.full_name                               as "الاسم",
+  u.status                                  as "الحالة",
+  string_agg(r.code, ', ')                  as "الأدوار",
+  (select count(*)
+     from public.user_roles ur2
+     join public.role_permissions rp on rp.role_id = ur2.role_id
+    where ur2.user_id = u.id)               as "عدد الصلاحيات"
+from public.users u
+left join public.user_roles ur on ur.user_id = u.id
+left join public.roles r on r.id = ur.role_id
+where u.id = 'e6088d05-c472-4059-9c0f-3660190bbcb0'
+   or lower(u.email) = 'alahmdyalahmdyalahmdy13@gmail.com'
+group by u.id, u.email, u.full_name, u.status;
+
+
+-- ============================================================================
+-- ==================== التحقق النهائي ====================
+-- ============================================================================
+-- النتائج المتوقعة موضّحة في عمود "المتوقع".
+
+select 'خوارزمية Luhn — رقم صحيح'  as "الفحص",
+       public.is_valid_imei('490154203237518')::text as "النتيجة", 'true'  as "المتوقع"
+union all
+select 'خوارزمية Luhn — رقم خاطئ',
+       public.is_valid_imei('490154203237519')::text, 'false'
+union all
+select 'عدد الأدوار',
+       (select count(*)::text from public.roles), '7'
+union all
+select 'عدد الصلاحيات',
+       (select count(*)::text from public.permissions), '31'
+union all
+select 'جداول بلا RLS (يجب أن يكون صفرًا)',
+       (select count(*)::text from pg_class c
+          join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity), '0'
+union all
+select 'صلاحيات ممنوحة لدور anon (يجب أن يكون صفرًا)',
+       (select count(*)::text from information_schema.role_table_grants
+         where grantee = 'anon' and table_schema = 'public'), '0'
+union all
+select 'دلاء التخزين',
+       (select count(*)::text from storage.buckets
+         where id in ('device-media','evidence','branding')), '3'
+union all
+select 'مدراء النظام المرتبطون',
+       (select count(*)::text from public.user_roles ur
+          join public.roles r on r.id = ur.role_id
+         where r.code = 'system_admin'), '1 أو أكثر';

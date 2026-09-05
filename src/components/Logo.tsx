@@ -1,21 +1,27 @@
+import { useState } from 'react';
+import { useBranding } from '../context/BrandingContext';
+
+const FALLBACK = `${import.meta.env.BASE_URL}logo.png`;
+
 /**
  * الشعار الرسمي للمنصة.
- * يُقرأ من ملف PNG بخلفية شفافة في public/logo.png — نقطة تبديل واحدة فقط.
- * ⚠️ لا يُعاد رسمه ولا تُغيَّر ألوانه أو نسبه أو نصوصه.
+ * يُقرأ من الشعار المرفوع عبر لوحة الإدارة (إعدادات النظام ← الهوية البصرية)،
+ * ويعود تلقائيًا إلى الشعار المرفق مع التطبيق إن لم يُرفع شعار.
+ * ⚠️ يُعرض كما هو دون إعادة رسم أو تغيير ألوان أو نسب.
  */
-const BASE = import.meta.env.BASE_URL;
-
 export function Logo({ size = 44, className }: { size?: number; className?: string }) {
+  const { logoUrl } = useBranding();
+  const [failed, setFailed] = useState(false);
+
   return (
     <img
-      src={`${BASE}logo.png`}
+      src={failed ? FALLBACK : logoUrl}
       width={size}
       height={size}
       className={className}
+      onError={() => setFailed(true)}
       alt="شعار حماية — نظام مكافحة سرقة الأجهزة"
       style={{ objectFit: 'contain' }}
     />
   );
 }
-
-export const LOGO_URL = `${BASE}logo.png`;

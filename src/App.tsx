@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { HashRouter, BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { BrandingProvider } from './context/BrandingContext';
 import { Layout } from './components/Layout';
 import { Guard } from './components/Guard';
 import { LoadingState } from './components/States';
@@ -85,9 +86,11 @@ export function App() {
   const Router = ROUTER_MODE === 'browser' ? BrowserRouter : HashRouter;
   return (
     <Router>
-      <AuthProvider>
-        <Shell />
-      </AuthProvider>
+      <BrandingProvider>
+        <AuthProvider>
+          <Shell />
+        </AuthProvider>
+      </BrandingProvider>
     </Router>
   );
 }
