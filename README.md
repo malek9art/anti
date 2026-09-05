@@ -32,6 +32,7 @@
 | [`docs-source/05-deploy-pages.md`](docs-source/05-deploy-pages.md) | النشر على GitHub Pages |
 | [`docs-source/06-security.md`](docs-source/06-security.md) | الثوابت الأمنية |
 | [`docs-source/07-troubleshooting.md`](docs-source/07-troubleshooting.md) | استكشاف الأعطال |
+| [`docs-source/workflows/README.md`](docs-source/workflows/README.md) | تفعيل أعمال GitHub Actions |
 
 ## أوامر سريعة
 
