@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { registerServiceWorker } from './lib/pwa';
 import './styles.css';
 
 const container = document.getElementById('root');
@@ -12,8 +13,15 @@ createRoot(container).render(
   </StrictMode>,
 );
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => undefined);
-  });
+// يعلن أن واجهة React أكملت الإقلاع — حارس الإقلاع في index.html يعتمد عليه
+window.__HIMAYA_BOOTED__ = true;
+// الإقلاع نجح: أعد ضبط حارس التعافي التلقائي حتى يعمل عند أعطال مستقبلية (بلا حلقة)
+try {
+  sessionStorage.removeItem('himaya:auto-recover');
+} catch {
+  /* تجاهل */
+}
+
+if (import.meta.env.PROD) {
+  registerServiceWorker();
 }

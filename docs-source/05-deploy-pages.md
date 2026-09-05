@@ -15,14 +15,19 @@
 ## إعادة البناء بعد أي تعديل
 
 ```bash
-VITE_BASE_PATH=/<repo>/ VITE_ROUTER_MODE=hash npm run build
+VITE_ROUTER_MODE=hash npm run build
 ```
 
 ثم ادفع مجلد `docs/`.
 
+> **مهم — مسارات نسبية**: بُنيت الحزمة بأصول نسبية (`./assets/...`) وليس مطلقة على
+> اسم المستودع، لذا يعمل النشر تحت أي مسار أساس تلقائيًا. **لا** تحقن
+> `VITE_BASE_PATH` بقيمة مطلقة مثل `/anti/`؛ فهذا يعيد كسر المسارات ويفشل فحص
+> `npm run check:pwa`.
+
 | المتغير | القيمة | السبب |
 |---|---|---|
-| `VITE_BASE_PATH` | `/<repo>/` | Pages يقدّم الموقع تحت مسار فرعي |
+| `VITE_BASE_PATH` | (اختياري — الافتراضي `./`) | إن رُكّن فليكن نسبيًا وحسب |
 | `VITE_ROUTER_MODE` | `hash` | Pages لا يعيد كتابة مسارات BrowserRouter |
 
 ## ملف `config.js`
