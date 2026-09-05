@@ -1,0 +1,44 @@
+name: نشر الخلفية (لمرة واحدة)
+
+# دوال الحافة تشارك مجلد _shared، ولا يمكن نشرها بشكل موثوق من لوحة Supabase.
+# شغّل هذا العمل يدويًا مرة واحدة، وأعده عند تغيير الدوال.
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_functions:
+        description: نشر دوال الحافة
+        type: boolean
+        default: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: التحقق من الأسرار المطلوبة
+        run: |
+          for v in SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_ID; do
+            if [ -z "${!v}" ]; then echo "::error::السر $v غير معرّف في GitHub Secrets"; exit 1; fi
+          done
+
+      - name: ربط المشروع
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: نشر دوال الحافة
+        if: ${{ inputs.deploy_functions }}
+        run: |
+          for dir in supabase/functions/*/; do
+            name=$(basename "$dir")
+            [ "$name" = "_shared" ] && continue
+            echo "نشر $name"
+            supabase functions deploy "$name" --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt=false
+          done
