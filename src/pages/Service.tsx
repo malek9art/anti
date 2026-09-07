@@ -14,18 +14,26 @@ interface CheckResult {
   alert: { report_number: string } | null;
 }
 
+type Receipt = {
+  kind: Mode;
+  operation_number: string;
+  at: string;
+};
+
 export function Service() {
-  const { isAal2 } = useAuth();
+  const { isAal2, profile } = useAuth();
   const [mode, setMode] = useState<Mode>('repair');
   const [imei, setImei] = useState('');
   const [check, setCheck] = useState<CheckResult | null>(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ shop_id: '', fault: '', actions: '', cost: '', reason: '', consent: false });
   const shops = useApi<Array<{ id: string; name_ar: string }>>('get-shops', { status: 'approved' });
   const err = imei ? imeiError(imei) : null;
+  const shopName = (shops.data ?? []).find((s) => s.id === form.shop_id)?.name_ar ?? '—';
 
   async function runCheck(e: FormEvent) {
     e.preventDefault();
@@ -39,20 +47,22 @@ export function Service() {
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!check?.device) return;
-    setBusy(true); setError(null); setOk(null);
+    setBusy(true); setError(null); setOk(null); setReceipt(null);
     try {
       if (mode === 'repair') {
         const r = await callFunction<{ operation_number: string }>('create-repair', {
           device_id: check.device.id, shop_id: form.shop_id,
           fault: form.fault, actions: form.actions || null, cost: Number(form.cost || 0),
         });
-        setOk(`تم تسجيل الصيانة. رقم العملية: ${r.operation_number}`);
+        setOk('تم تسجيل عملية الصيانة بنجاح.');
+        setReceipt({ kind: 'repair', operation_number: r.operation_number, at: new Date().toISOString() });
       } else {
         const r = await callFunction<{ operation_number: string }>('create-format-record', {
           device_id: check.device.id, shop_id: form.shop_id,
           reason: form.reason, consent: form.consent,
         });
-        setOk(`تم تسجيل الفرمتة. رقم العملية: ${r.operation_number}`);
+        setOk('تم تسجيل عملية الفرمتة بنجاح.');
+        setReceipt({ kind: 'format', operation_number: r.operation_number, at: new Date().toISOString() });
       }
     } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   }
@@ -92,6 +102,30 @@ export function Service() {
           {checking ? <LoadingState /> : null}
           {error ? <div className="alert alert--error" role="alert" style={{ marginTop: 14 }}>{error}</div> : null}
           {ok ? <div className="alert alert--ok" role="status" style={{ marginTop: 14 }}>{ok}</div> : null}
+
+          {receipt ? (
+            <section className="card" style={{ marginTop: 16, borderColor: 'var(--ok)' }}>
+              <div className="card__head">
+                <h2>✅ تم تسجيل عملية {receipt.kind === 'repair' ? 'الصيانة' : 'الفرمتة'}</h2>
+                <span className="badge badge--ok">مؤكَّدة</span>
+              </div>
+              <div className="card__body">
+                <dl className="receipt">
+                  <div className="receipt__row"><dt>اسم الفني</dt><dd>{profile?.full_name ?? '—'}</dd></div>
+                  <div className="receipt__row"><dt>المحل</dt><dd>{shopName}</dd></div>
+                  <div className="receipt__row"><dt>IMEI</dt><dd className="mono">{imei}</dd></div>
+                  <div className="receipt__row"><dt>تاريخ ووقت العملية</dt><dd>{new Intl.DateTimeFormat('ar', {
+                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                  }).format(new Date(receipt.at))}</dd></div>
+                  <div className="receipt__row"><dt>رقم العملية</dt><dd className="mono">{receipt.operation_number}</dd></div>
+                </dl>
+                <p className="hint" style={{ marginBottom: 0 }}>
+                  🛡️ هذا السجل غير قابل للحذف أو التعديل من قِبل الفني، ويُحفظ في سجل التدقيق
+                  (append-only) لضمان سلامة العمليات.
+                </p>
+              </div>
+            </section>
+          ) : null}
 
           {check?.security_alert ? (
             <div className="alert alert--error" role="alert" style={{ marginTop: 14 }}>

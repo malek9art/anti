@@ -3,6 +3,8 @@ import { useApi } from '../lib/useApi';
 import { callFunction, errorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { LoadingState, EmptyState, ErrorState } from '../components/States';
+import { MediaUploader } from '../components/MediaUploader';
+import { MediaGallery, type MediaItem } from '../components/MediaGallery';
 import { imeiError } from '../lib/imei';
 import { DEVICE_STATUS_AR, formatDate } from '../lib/format';
 
@@ -35,7 +37,7 @@ export function Devices() {
         ) : null}
       </div>
 
-      {showForm ? <DeviceForm onDone={() => { setShowForm(false); list.reload(); }} /> : null}
+      {showForm ? <DeviceForm onDone={() => setShowForm(false)} onCreated={() => list.reload()} /> : null}
 
       <section className="card">
         <div className="card__head">
@@ -96,11 +98,12 @@ export function Devices() {
   );
 }
 
-function DeviceForm({ onDone }: { onDone: () => void }) {
+function DeviceForm({ onDone, onCreated }: { onDone: () => void; onCreated?: () => void }) {
   const [form, setForm] = useState({ brand: '', model: '', color: '', serial: '', imei_primary: '', imei_secondary: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
   const primaryErr = form.imei_primary ? imeiError(form.imei_primary) : null;
   const secondaryErr = form.imei_secondary ? imeiError(form.imei_secondary) : null;
@@ -111,15 +114,16 @@ function DeviceForm({ onDone }: { onDone: () => void }) {
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (primaryErr || secondaryErr) return;
-    setBusy(true); setError(null); setOk(null);
+    setBusy(true); setError(null); setOk(null); setCreatedId(null);
     try {
-      await callFunction('create-device', {
+      const id = await callFunction<{ id: string } | string>('create-device', {
         brand: form.brand, model: form.model, color: form.color || null, serial: form.serial || null,
         imei_primary: form.imei_primary, imei_secondary: form.imei_secondary || null,
       });
-      setOk('تم تسجيل الجهاز بنجاح وأُنشئ له خط زمني.');
-      setForm({ brand: '', model: '', color: '', serial: '', imei_primary: '', imei_secondary: '' });
-      onDone();
+      const deviceId = typeof id === 'string' ? id : id?.id;
+      setCreatedId(deviceId ?? null);
+      setOk('تم تسجيل الجهاز بنجاح. يمكنك إضافة صور الجهاز الآن ثم إغلاق النموذج.');
+      onCreated?.();
     } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   }
 
@@ -168,14 +172,34 @@ function DeviceForm({ onDone }: { onDone: () => void }) {
             {busy ? 'جارٍ الحفظ…' : 'تسجيل الجهاز'}
           </button>
         </form>
+
+        {createdId ? (
+          <div style={{ marginTop: 18, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <h3 style={{ fontSize: 15, marginBottom: 0 }}>📷 صور الجهاز (تصوير الجهاز عند التسجيل)</h3>
+              <button type="button" className="btn btn--ghost btn--sm" style={{ marginInlineStart: 'auto' }}
+                onClick={() => onDone()}>إنهاء وإغلاق</button>
+            </div>
+            <MediaUploader
+              bucket="device-media"
+              createFn="media-create-upload-url"
+              completeFn="media-complete-upload"
+              createBody={{ device_id: createdId }}
+              completeBody={(path) => ({ device_id: createdId, path, media_type: 'image', caption: 'صورة الجهاز عند التسجيل' })}
+              label="إضافة صورة"
+            />
+          </div>
+        ) : null}
       </div>
     </section>
   );
 }
 
 function Timeline({ device, onClose }: { device: DeviceRow; onClose: () => void }) {
+  const { can } = useAuth();
   const { data, loading, error, reload } = useApi<Array<{ event_type: string; description_ar: string; created_at: string }>>(
     'get-device-timeline', { device_id: device.id });
+  const media = useApi<MediaItem[]>('get-device-media', { device_id: device.id });
   return (
     <section className="card" style={{ marginTop: 16 }}>
       <div className="card__head">
@@ -196,6 +220,30 @@ function Timeline({ device, onClose }: { device: DeviceRow; onClose: () => void 
             </li>
           ))}
         </ul>
+
+        <div style={{ marginTop: 18, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <h3 style={{ fontSize: 15 }}>📷 صور الجهاز</h3>
+            {can('create_device') ? (
+              <MediaUploader
+                bucket="device-media"
+                createFn="media-create-upload-url"
+                completeFn="media-complete-upload"
+                createBody={{ device_id: device.id }}
+                completeBody={(path) => ({ device_id: device.id, path, media_type: 'image', caption: 'إضافة صورة من الخط الزمني' })}
+                label="إضافة صورة"
+                onUploaded={() => media.reload()}
+              />
+            ) : null}
+          </div>
+          {media.loading ? <LoadingState label="جارٍ تحميل الصور…" /> : null}
+          <MediaGallery
+            items={media.data ?? []}
+            downloadFn="media-download-url"
+            downloadBody={(id) => ({ media_id: id })}
+            onError={(m) => void m}
+          />
+        </div>
       </div>
     </section>
   );

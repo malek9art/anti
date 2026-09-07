@@ -2,13 +2,19 @@ import { useState, type FormEvent } from 'react';
 import { callFunction, errorMessage } from '../lib/api';
 import { LoadingState } from '../components/States';
 import { Logo } from '../components/Logo';
-import { formatNumber, formatMoney } from '../lib/format';
+import { formatNumber, formatMoney, SHOP_STATUS_AR } from '../lib/format';
 
 const KINDS: Record<string, string> = {
   sales: 'المبيعات', repairs: 'الصيانة', formats: 'الفرمتة', reports: 'البلاغات',
+  compliance: 'امتثال المحلات',
 };
 
 interface Result { kind: string; from: string; to: string; data: Record<string, number> }
+
+interface ComplianceRow {
+  shop_id: string; name_ar: string; license_number: string; status: string;
+  sales: number; repairs: number; formats: number;
+}
 
 const LABELS: Record<string, string> = {
   count: 'عدد العمليات', total: 'إجمالي المبالغ', total_cost: 'إجمالي التكلفة',
@@ -24,14 +30,19 @@ export function Analytics() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  const [compliance, setCompliance] = useState<ComplianceRow[] | null>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    setBusy(true); setError(null); setResult(null);
+    setBusy(true); setError(null); setResult(null); setCompliance(null);
     try {
-      setResult(await callFunction<Result>('generate-report', {
-        kind, from: new Date(from).toISOString(), to: new Date(`${to}T23:59:59`).toISOString(),
-      }));
+      const fromIso = new Date(from).toISOString();
+      const toIso = new Date(`${to}T23:59:59`).toISOString();
+      if (kind === 'compliance') {
+        setCompliance(await callFunction<ComplianceRow[]>('get-shop-compliance', { from: fromIso, to: toIso }));
+      } else {
+        setResult(await callFunction<Result>('generate-report', { kind, from: fromIso, to: toIso }));
+      }
     } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   }
 
@@ -104,6 +115,58 @@ export function Analytics() {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+      ) : null}
+
+      {compliance ? (
+        <section className="card">
+          <div className="card__head">
+            <Logo size={30} />
+            <h2>امتثال المحلات — {from} إلى {to}</h2>
+          </div>
+          <div className="card__body">
+            <p className="hint" style={{ marginBottom: 12 }}>
+              المحلات المعتمدة التي لم تُسجِّل أي عملية (بيع/صيانة/فرمتة) خلال الفترة تُعلَّم <span className="badge badge--danger">غير ملتزمة</span>.
+            </p>
+            {compliance.length === 0 ? (
+              <p style={{ color: 'var(--muted)' }}>لا توجد محلات معتمدة ضمن هذه الفترة.</p>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <caption className="sr-only">تقرير امتثال المحلات</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">المحل</th><th scope="col">رقم الرخصة</th><th scope="col">الحالة</th>
+                      <th scope="col">مبيعات</th><th scope="col">صيانات</th><th scope="col">فرمتات</th>
+                      <th scope="col">الإجمالي</th><th scope="col">الالتزام</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compliance.map((s) => {
+                      const total = s.sales + s.repairs + s.formats;
+                      const ok = total > 0;
+                      return (
+                        <tr key={s.shop_id}>
+                          <td>{s.name_ar}</td>
+                          <td className="mono">{s.license_number}</td>
+                          <td>{SHOP_STATUS_AR[s.status] ?? s.status}</td>
+                          <td>{formatNumber(s.sales)}</td>
+                          <td>{formatNumber(s.repairs)}</td>
+                          <td>{formatNumber(s.formats)}</td>
+                          <td>{formatNumber(total)}</td>
+                          <td>
+                            <span className={`badge ${ok ? 'badge--ok' : 'badge--danger'}`}>
+                              {ok ? 'ملتزمة' : 'غير ملتزمة'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </section>
       ) : null}

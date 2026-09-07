@@ -3,6 +3,8 @@ import { useApi } from '../lib/useApi';
 import { callFunction, errorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { LoadingState, EmptyState, ErrorState, MfaRequiredState } from '../components/States';
+import { MediaUploader } from '../components/MediaUploader';
+import { MediaGallery } from '../components/MediaGallery';
 import { imeiError } from '../lib/imei';
 import { REPORT_STATUS_AR, PRIORITY_AR, formatDate } from '../lib/format';
 
@@ -174,10 +176,10 @@ interface Detail {
   report: Record<string, string>;
   history: Array<{ from_status: string | null; to_status: string; note: string | null; created_at: string }>;
   follow_ups: Array<{ id: string; body: string; created_at: string }>;
-  evidence: Array<{ id: string; description: string | null; created_at: string }>;
+  evidence: Array<{ id: string; media_type: string; description: string | null; created_at: string }>;
 }
 
-function ReportDetail({ id, onChanged, onClose }: { id: string; onChanged: () => void; onClose: () => void }) {
+export function ReportDetail({ id, onChanged, onClose }: { id: string; onChanged: () => void; onClose: () => void }) {
   const { can } = useAuth();
   const { data, loading, error, reload } = useApi<Detail>('get-report-detail', { report_id: id });
   const assignees = useApi<Array<{ id: string; full_name: string }>>('get-case-assignees', {}, can('assign_case'));
@@ -271,6 +273,29 @@ function ReportDetail({ id, onChanged, onClose }: { id: string; onChanged: () =>
               </li>
             ))}
           </ul>
+        )}
+
+        <h3 style={{ fontSize: 15, marginTop: 20 }}>الأدلة ({data.evidence.length})</h3>
+        {can('upload_evidence') ? (
+          <div style={{ marginBottom: 10 }}>
+            <MediaUploader
+              bucket="evidence"
+              createFn="evidence-create-upload-url"
+              completeFn="evidence-complete-upload"
+              createBody={{ report_id: id }}
+              completeBody={(path) => ({ report_id: id, path, media_type: 'image', description: 'دليل مرفوع من بلاغ', access_level: 'restricted' })}
+              label="📎 رفع دليل / صورة"
+              onUploaded={() => reload()}
+            />
+            <p className="hint">رفع الأدلة يتطلب تحققًا بخطوتين (AAL2) وصلاحية رفع الأدلة.</p>
+          </div>
+        ) : null}
+        {data.evidence.length === 0 ? <p style={{ color: 'var(--muted)' }}>لا توجد أدلة بعد.</p> : (
+          <MediaGallery
+            items={data.evidence.map((e) => ({ ...e, media_type: e.media_type ?? 'image' }))}
+            downloadFn="evidence-download-url"
+            downloadBody={(eid) => ({ evidence_id: eid, purpose: 'view_report_evidence' })}
+          />
         )}
       </div>
     </section>

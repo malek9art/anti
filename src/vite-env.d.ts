@@ -7,4 +7,5 @@ interface HimayaConfig {
 
 interface Window {
   __HIMAYA_CONFIG__?: HimayaConfig;
+  __HIMAYA_BOOTED__?: boolean;
 }

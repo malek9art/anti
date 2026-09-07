@@ -17,7 +17,7 @@
 --
 --  مولّد آليًا من supabase/migrations — لا تعدّله يدويًا.
 --  لإعادة التوليد: npm run sql:setup
---  عدد ملفات المخطط المدمجة: 15
+--  عدد ملفات المخطط المدمجة: 17
 -- ============================================================================
 
 
@@ -1867,6 +1867,75 @@ $$;
 grant execute on all functions in schema public to authenticated;
 revoke execute on all functions in schema public from anon;
 grant execute on function public.op_get_branding() to anon;
+
+-- ==================== 0016_frontend_alignment.sql ====================
+-- 0016: ملاءمة الواجهات — وسائط الأجهزة وتقرير الامتثال
+-- يُضيف: قائمة وسائط الجهاز (device_media) وأداة مراقبة التزام المحلات بالتسجيل.
+
+create or replace function public.op_get_device_media(p_device_id uuid)
+returns jsonb language plpgsql security definer set search_path = public, private, pg_temp as $$
+declare v_actor uuid := auth.uid();
+begin
+  perform public.require_permission('view_device');
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', q.id, 'media_type', q.media_type, 'caption', q.caption,
+      'created_at', q.created_at) order by q.created_at desc)
+    from (
+      select m.id, m.media_type, m.caption, m.created_at
+      from public.device_media m
+      where m.device_id = p_device_id
+      and exists (select 1 from public.devices d where d.id = m.device_id)
+    ) q
+  ), '[]'::jsonb);
+end $$;
+
+create or replace function public.op_get_shop_compliance(p_from timestamptz, p_to timestamptz)
+returns jsonb language plpgsql security definer set search_path = public, private, pg_temp as $$
+declare v_actor uuid := auth.uid();
+begin
+  perform public.require_permission('generate_reports');
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'shop_id', s.id, 'name_ar', s.name_ar, 'license_number', s.license_number,
+      'status', s.status,
+      'sales', coalesce((select count(*) from public.sales r where r.shop_id = s.id and r.sold_at between p_from and p_to), 0),
+      'repairs', coalesce((select count(*) from public.repair_records r where r.shop_id = s.id and r.created_at between p_from and p_to), 0),
+      'formats', coalesce((select count(*) from public.format_records r where r.shop_id = s.id and r.created_at between p_from and p_to), 0)
+    ) order by s.name_ar)
+    from public.shops s
+    where s.status = 'approved'
+  ), '[]'::jsonb);
+end $$;
+
+grant execute on all functions in schema public to authenticated;
+
+-- ==================== 0017_delegate_tasks.sql ====================
+-- 0017: شاشة «مهامي» للمندوب — قائمة البلاغات المُحالة إلى المستخدم الحالي
+create or replace function public.op_get_my_tasks(p_limit int default 50)
+returns jsonb language plpgsql security definer set search_path = public, pg_temp as $$
+declare v_actor uuid := auth.uid();
+begin
+  if v_actor is null then raise exception 'UNAUTHENTICATED' using errcode = '42501'; end if;
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', q.id, 'report_number', q.report_number, 'status', q.status,
+      'priority', q.priority, 'imei_masked', q.imei_masked,
+      'incident_at', q.incident_at, 'assigned_at', q.assigned_at,
+      'incident_location', q.incident_location) order by q.assigned_at desc nulls last, q.created_at desc)
+    from (
+      select r.id, r.report_number, r.status, r.priority, r.incident_at,
+             r.assigned_at, r.incident_location, r.created_at,
+             '***********' || right(r.imei, 4) as imei_masked
+      from public.stolen_reports r
+      where r.assigned_to = v_actor
+      order by r.assigned_at desc nulls last, r.created_at desc
+      limit p_limit
+    ) q
+  ), '[]'::jsonb);
+end $$;
+
+grant execute on all functions in schema public to authenticated;
 
 
 -- ============================================================================

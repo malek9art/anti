@@ -5,7 +5,8 @@
 | السبب | الحل |
 |---|---|
 | مجلد Pages هو `/ (root)` | غيّره إلى `/docs` من Settings → Pages |
-| `VITE_BASE_PATH` خاطئ | أعد البناء بـ `VITE_BASE_PATH=/<repo>/` |
+| Service Worker يخزّن `index.html` قديمًا | افتح `/reset.html` أو زر «مسح الذاكرة المؤقتة» في شاشة الخطأ — لا تدخل `index.html` أو باث مطلق في `PRECACHE` |
+| مسارات مطلقة باسم المستودع (`/anti/assets/...`) | لا تحقن `VITE_BASE_PATH` بقيمة مطلقة؛ الحزمة مبنية بأصول نسبية `./` |
 | استخدام BrowserRouter | استخدم `VITE_ROUTER_MODE=hash` |
 | Jekyll يتجاهل الأصول | تأكد من وجود `docs/.nojekyll` |
 

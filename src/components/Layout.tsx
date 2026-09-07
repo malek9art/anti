@@ -13,6 +13,7 @@ const NAV: NavItem[] = [
   { to: '/sales', label: 'المبيعات', icon: '🧾', group: 'العمليات', permission: 'create_sale' },
   { to: '/service', label: 'الصيانة والفرمتة', icon: '🛠️', group: 'العمليات', permission: 'create_repair' },
   { to: '/reports', label: 'بلاغات السرقة', icon: '🚨', group: 'البلاغات', mobile: true },
+  { to: '/my-tasks', label: 'مهامي', icon: '📋', group: 'البلاغات', permission: 'update_follow_up', mobile: true },
   { to: '/shops', label: 'المحلات', icon: '🏪', group: 'الجهات' },
   { to: '/users', label: 'المستخدمون', icon: '👥', group: 'الإدارة', permission: 'manage_users' },
   { to: '/audit', label: 'سجل التدقيق', icon: '📜', group: 'الرقابة', permission: 'view_audit_logs' },

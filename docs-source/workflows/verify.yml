@@ -19,5 +19,6 @@ jobs:
       - name: بوابة الجودة الكاملة
         run: npm run verify
         env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          # لا تحقن مسارًا مطلقًا: الحزمة مبنية بأصول نسبية (./) وتعمل تحت أي مسار أساس.
+          # الحقن بـ /<repo>/ يُفشل فحص check-pwa (المسارات المطلقة ممنوعة).
           VITE_ROUTER_MODE: hash
