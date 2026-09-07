@@ -14,6 +14,7 @@ import { Devices } from './pages/Devices';
 import { Sales } from './pages/Sales';
 import { Service } from './pages/Service';
 import { Reports } from './pages/Reports';
+import { MyTasks } from './pages/MyTasks';
 import { Shops } from './pages/Shops';
 import { Users } from './pages/Users';
 import { Audit } from './pages/Audit';
@@ -67,6 +68,7 @@ function Shell() {
         <Route path="sales" element={<Guard permission="create_sale"><Sales /></Guard>} />
         <Route path="service" element={<Guard permission="create_repair"><Service /></Guard>} />
         <Route path="reports" element={<Guard><Reports /></Guard>} />
+        <Route path="my-tasks" element={<Guard permission="update_follow_up"><MyTasks /></Guard>} />
         <Route path="shops" element={<Guard><Shops /></Guard>} />
         <Route path="users" element={<Guard permission="manage_users"><Users /></Guard>} />
         <Route path="audit" element={<Guard permission="view_audit_logs"><Audit /></Guard>} />

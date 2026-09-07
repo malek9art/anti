@@ -179,7 +179,7 @@ interface Detail {
   evidence: Array<{ id: string; media_type: string; description: string | null; created_at: string }>;
 }
 
-function ReportDetail({ id, onChanged, onClose }: { id: string; onChanged: () => void; onClose: () => void }) {
+export function ReportDetail({ id, onChanged, onClose }: { id: string; onChanged: () => void; onClose: () => void }) {
   const { can } = useAuth();
   const { data, loading, error, reload } = useApi<Detail>('get-report-detail', { report_id: id });
   const assignees = useApi<Array<{ id: string; full_name: string }>>('get-case-assignees', {}, can('assign_case'));

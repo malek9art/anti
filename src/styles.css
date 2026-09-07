@@ -268,3 +268,10 @@ td.mono { direction: ltr; text-align: right; font-variant-numeric: tabular-nums;
 
 /* جدول الامتثال */
 .badge--info { background: var(--green-050); color: var(--green-700); }
+
+/* ===== بطاقة إيصال تسجيل العملية (الفني) ===== */
+.receipt { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.receipt__row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.receipt__row dt { color: var(--muted); font-size: 13px; }
+.receipt__row dd { margin: 0; font-weight: 600; font-size: 14px; }
+.receipt__row dd.mono { direction: ltr; text-align: right; font-variant-numeric: tabular-nums; }
