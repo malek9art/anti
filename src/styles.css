@@ -342,3 +342,32 @@ td.mono { direction: ltr; text-align: right; font-variant-numeric: tabular-nums;
 .receipt__row dt { color: var(--muted); font-size: 13px; }
 .receipt__row dd { margin: 0; font-weight: 600; font-size: 14px; }
 .receipt__row dd.mono { direction: ltr; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ===== معالج إنشاء الحساب + مهام الدور ===== */
+.steps { display: flex; gap: 6px; justify-content: center; margin-bottom: 14px; }
+.steps__dot { width: 34px; height: 5px; border-radius: 3px; background: var(--line); }
+.steps__dot--active { background: var(--gold-500); }
+
+.role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.role-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 14px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--white); color: inherit; cursor: pointer; text-align: start;
+  font: inherit; text-decoration: none; transition: border-color .15s, background .15s;
+}
+.role-card:hover { border-color: var(--gold-500); }
+.role-card--active { border-color: var(--gold-500); background: var(--gold-050); }
+.role-card--link { min-height: 0; }
+.role-card__icon { font-size: 24px; }
+.role-card__title { font-weight: 700; font-size: 14px; }
+.role-card__desc { font-size: 12px; color: var(--muted); }
+
+.request-card {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 12px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.request-card__meta {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px;
+  font-size: 12.5px; color: var(--muted);
+}
