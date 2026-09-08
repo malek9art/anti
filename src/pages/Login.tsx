@@ -8,6 +8,7 @@ type Tab = 'signin' | 'signup';
 
 export function Login() {
   const [tab, setTab] = useState<Tab>('signin');
+  const [forgot, setForgot] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -39,6 +40,54 @@ export function Login() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function submitForgot(e: FormEvent) {
+    e.preventDefault();
+    setError(null); setNotice(null); setBusy(true);
+    try {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim());
+      if (err) throw new Error(mapAuthError(err.message));
+      setNotice('إن كان البريد مسجلًا لدينا فستصلك رسالة تحتوي رابط إعادة التعيين. تحقق من بريدك.');
+      setForgot(false);
+    } catch (e2) {
+      setError(e2 instanceof Error ? e2.message : 'تعذّر إرسال رابط الاستعادة');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (forgot) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <div className="auth-card__brand">
+            <Logo size={92} />
+            <h1>{APP_FULL_NAME}</h1>
+            <p>استعادة كلمة المرور</p>
+            <div className="auth-card__rule" />
+          </div>
+
+          {error ? <div className="alert alert--error" role="alert">{error}</div> : null}
+
+          <form onSubmit={submitForgot} noValidate>
+            <div className="field">
+              <label htmlFor="forgotEmail">البريد الإلكتروني</label>
+              <input id="forgotEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email" dir="ltr" required />
+              <div className="hint">سنرسل لك رابطًا آمنًا لتعيين كلمة مرور جديدة.</div>
+            </div>
+            <button type="submit" className="btn btn--block" disabled={busy}>
+              {busy ? 'جارٍ الإرسال…' : 'إرسال رابط الاستعادة'}
+            </button>
+            <button type="button" className="btn btn--ghost btn--block" style={{ marginTop: 8 }}
+              onClick={() => { setForgot(false); setError(null); }}>
+              العودة لتسجيل الدخول
+            </button>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -88,6 +137,12 @@ export function Login() {
           <button type="submit" className="btn btn--block" disabled={busy}>
             {busy ? 'جارٍ المعالجة…' : tab === 'signin' ? 'دخول' : 'إنشاء الحساب'}
           </button>
+          {tab === 'signin' ? (
+            <button type="button" className="btn btn--ghost btn--block" style={{ marginTop: 8 }}
+              onClick={() => { setForgot(true); setError(null); setNotice(null); }}>
+              نسيت كلمة المرور؟
+            </button>
+          ) : null}
         </form>
 
         <p className="auth-foot">

@@ -22,6 +22,8 @@ import { Security } from './pages/Security';
 import { Analytics } from './pages/Analytics';
 import { Settings } from './pages/Settings';
 import { Account } from './pages/Account';
+import { Notifications } from './pages/Notifications';
+import { ResetPassword } from './pages/ResetPassword';
 import { NotFound } from './pages/NotFound';
 import { supabase } from './lib/supabase';
 import { ROUTER_MODE, isConfigured } from './lib/config';
@@ -30,6 +32,14 @@ function Shell() {
   const { session, loading, registered, profile, roles } = useAuth();
   const [needsMfa, setNeedsMfa] = useState(false);
   const [mfaChecked, setMfaChecked] = useState(false);
+  const [recovering, setRecovering] = useState(() => window.location.hash.includes('type=recovery'));
+
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!session) { setNeedsMfa(false); setMfaChecked(true); return; }
@@ -54,6 +64,7 @@ function Shell() {
     );
   }
 
+  if (recovering) return <ResetPassword onDone={() => setRecovering(false)} />;
   if (loading || !mfaChecked) return <div className="auth-page"><div className="auth-card"><LoadingState /></div></div>;
   if (!session) return <Login />;
   if (needsMfa) return <MfaChallenge />;
@@ -75,6 +86,7 @@ function Shell() {
         <Route path="security" element={<Guard permission="view_security_events"><Security /></Guard>} />
         <Route path="analytics" element={<Guard permission="generate_reports"><Analytics /></Guard>} />
         <Route path="settings" element={<Guard permission="manage_system_settings"><Settings /></Guard>} />
+        <Route path="notifications" element={<Notifications />} />
         <Route path="account" element={<Account />} />
         <Route path="404" element={<NotFound />} />
         <Route path="*" element={<Navigate to="/404" replace />} />

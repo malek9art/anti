@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Logo } from './Logo';
+import { callFunction } from '../lib/api';
 import { APP_FULL_NAME, APP_NAME } from '../lib/config';
 
 interface NavItem { to: string; label: string; icon: string; permission?: string; group: string; mobile?: boolean }
@@ -14,6 +15,7 @@ const NAV: NavItem[] = [
   { to: '/service', label: 'الصيانة والفرمتة', icon: '🛠️', group: 'العمليات', permission: 'create_repair' },
   { to: '/reports', label: 'بلاغات السرقة', icon: '🚨', group: 'البلاغات', mobile: true },
   { to: '/my-tasks', label: 'مهامي', icon: '📋', group: 'البلاغات', permission: 'update_follow_up', mobile: true },
+  { to: '/notifications', label: 'التنبيهات', icon: '🔔', group: 'الرئيسية' },
   { to: '/shops', label: 'المحلات', icon: '🏪', group: 'الجهات' },
   { to: '/users', label: 'المستخدمون', icon: '👥', group: 'الإدارة', permission: 'manage_users' },
   { to: '/audit', label: 'سجل التدقيق', icon: '📜', group: 'الرقابة', permission: 'view_audit_logs' },
@@ -26,7 +28,21 @@ const NAV: NavItem[] = [
 export function Layout() {
   const { profile, can, signOut, aal } = useAuth();
   const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      callFunction<Array<{ is_read: boolean }>>('get-notifications', { limit: 50 })
+        .then((list) => { if (alive) setUnread(list.filter((n) => !n.is_read).length); })
+        .catch(() => undefined);
+    };
+    load();
+    const t = window.setInterval(load, 60000);
+    return () => { alive = false; window.clearInterval(t); };
+  }, [location.pathname]);
 
   useEffect(() => { setOpen(false); }, [location.pathname]);
   useEffect(() => {
@@ -84,6 +100,16 @@ export function Layout() {
           <div className="topbar__logo"><Logo size={34} /></div>
           <h1 className="topbar__title">{current?.label ?? APP_FULL_NAME}</h1>
           <div className="topbar__spacer" />
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm topbar__bell"
+            onClick={() => navigate('/notifications')}
+            aria-label={`التنبيهات — ${unread} غير مقروءة`}
+            title="مركز التنبيهات"
+          >
+            🔔
+            {unread > 0 ? <span className="topbar__bell-badge">{unread > 99 ? '99+' : unread}</span> : null}
+          </button>
           <div className="topbar__user">
             <strong>{profile?.full_name ?? 'مستخدم'}</strong>
             {profile?.email}
