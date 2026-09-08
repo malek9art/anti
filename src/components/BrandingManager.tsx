@@ -1,7 +1,9 @@
 import { useRef, useState, type ChangeEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { callFunction, errorMessage } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../context/BrandingContext';
+import { useAuth } from '../context/AuthContext';
 import { Logo } from './Logo';
 
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -9,12 +11,18 @@ const ALLOWED = ['image/png', 'image/svg+xml', 'image/webp'];
 
 export function BrandingManager() {
   const { reload, isCustom } = useBranding();
+  const { refresh } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // رفع الجلسة إلى AAL2 داخل الصفحة عند الحاجة (رمز TOTP من تطبيق المصادقة)
+  const [needsMfa, setNeedsMfa] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [hasFactor, setHasFactor] = useState(true);
+  const pendingAction = useRef<(() => Promise<void>) | null>(null);
 
   function pick(e: ChangeEvent<HTMLInputElement>) {
     setError(null); setMsg(null);
@@ -32,27 +40,34 @@ export function BrandingManager() {
     setPreview(URL.createObjectURL(f));
   }
 
-  async function upload() {
-    if (!file) return;
-    setBusy(true); setError(null); setMsg(null);
+  const isMfaError = (e: unknown) => errorMessage(e).includes('المصادقة الثنائية');
+
+  /** فحص وجود عامل TOTP مفعّل لدى المستخدم */
+  async function checkFactor(): Promise<boolean> {
+    const { data } = await supabase.auth.mfa.listFactors();
+    const okFactor = (data?.totp ?? []).some((f) => f.status === 'verified');
+    setHasFactor(okFactor);
+    return okFactor;
+  }
+
+  /** التحقق من رمز TOTP ثم إعادة تنفيذ العملية المعلّقة تلقائيًا */
+  async function verifyMfa() {
+    setBusy(true); setError(null);
     try {
-      // 1) رابط رفع موقّع من الخادم بعد التحقق من الصلاحية وAAL2
-      const { path, token } = await callFunction<{ path: string; token: string }>(
-        'branding-create-upload-url', { content_type: file.type });
-
-      // 2) الرفع المباشر إلى التخزين بالرمز الموقّع
-      const { error: upErr } = await supabase.storage
-        .from('branding')
-        .uploadToSignedUrl(path, token, file, { contentType: file.type });
-      if (upErr) throw new Error(upErr.message);
-
-      // 3) تثبيت المسار في إعدادات النظام مع رفع رقم الإصدار
-      await callFunction('set-branding-logo', { path });
-
-      setMsg('تم تحديث الشعار بنجاح. سيظهر في كل شاشات المنصة فورًا.');
-      setFile(null); setPreview(null);
-      if (inputRef.current) inputRef.current.value = '';
-      reload();
+      const { data } = await supabase.auth.mfa.listFactors();
+      const factor = (data?.totp ?? []).find((f) => f.status === 'verified');
+      if (!factor) { setHasFactor(false); return; }
+      const { data: ch, error: cErr } = await supabase.auth.mfa.challenge({ factorId: factor.id });
+      if (cErr) throw new Error(cErr.message);
+      const { error: vErr } = await supabase.auth.mfa.verify({
+        factorId: factor.id, challengeId: ch.id, code: mfaCode.trim(),
+      });
+      if (vErr) throw new Error('رمز التحقق غير صحيح أو منتهي، أدخل الرمز الحالي من تطبيق المصادقة');
+      setNeedsMfa(false); setMfaCode('');
+      await refresh();
+      const action = pendingAction.current;
+      pendingAction.current = null;
+      if (action) await action();
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -60,13 +75,57 @@ export function BrandingManager() {
     }
   }
 
+  /** يلتقط طلب AAL2 ويعرض خطوة الرمز بدل فشل العملية */
+  async function guard(action: () => Promise<void>) {
+    try {
+      await action();
+    } catch (e) {
+      if (isMfaError(e)) {
+        pendingAction.current = action;
+        setNeedsMfa(true);
+        await checkFactor();
+      } else {
+        setError(errorMessage(e));
+      }
+    }
+  }
+
+  async function doUpload() {
+    if (!file) return;
+    // 1) رابط رفع موقّع من الخادم بعد التحقق من الصلاحية وAAL2
+    const { path, token } = await callFunction<{ path: string; token: string }>(
+      'branding-create-upload-url', { content_type: file.type });
+
+    // 2) الرفع المباشر إلى التخزين بالرمز الموقّع
+    const { error: upErr } = await supabase.storage
+      .from('branding')
+      .uploadToSignedUrl(path, token, file, { contentType: file.type });
+    if (upErr) throw new Error(upErr.message);
+
+    // 3) تثبيت المسار في إعدادات النظام مع رفع رقم الإصدار
+    await callFunction('set-branding-logo', { path });
+
+    setMsg('تم تحديث الشعار بنجاح. سيظهر في كل شاشات المنصة فورًا.');
+    setFile(null); setPreview(null);
+    if (inputRef.current) inputRef.current.value = '';
+    reload();
+  }
+
+  async function upload() {
+    if (!file) return;
+    setBusy(true); setError(null); setMsg(null);
+    try { await guard(doUpload); } finally { setBusy(false); }
+  }
+
   async function reset() {
     setBusy(true); setError(null); setMsg(null);
     try {
-      await callFunction('reset-branding-logo');
-      setMsg('تمت إعادة الشعار الافتراضي المرفق مع التطبيق.');
-      reload();
-    } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
+      await guard(async () => {
+        await callFunction('reset-branding-logo');
+        setMsg('تمت إعادة الشعار الافتراضي المرفق مع التطبيق.');
+        reload();
+      });
+    } finally { setBusy(false); }
   }
 
   return (
@@ -140,8 +199,38 @@ export function BrandingManager() {
           ) : null}
         </div>
 
+        {needsMfa ? (
+          <div className="alert alert--warn" style={{ marginTop: 14, marginBottom: 0 }} role="alert">
+            {hasFactor ? (
+              <>
+                <strong>خطوة أمان مطلوبة:</strong> هذه العملية حساسة وتتطلب مصادقة ثنائية (AAL2).
+                <div className="field" style={{ marginTop: 10, maxWidth: 260 }}>
+                  <label htmlFor="brand-mfa-code">رمز التحقق من تطبيق المصادقة</label>
+                  <input id="brand-mfa-code" className="mono" inputMode="numeric" maxLength={6}
+                    value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} autoComplete="one-time-code" />
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" className="btn btn--sm" disabled={busy || mfaCode.trim().length !== 6}
+                    onClick={() => void verifyMfa()}>
+                    {busy ? 'جارٍ التحقق…' : 'تحقق وأكمل العملية'}
+                  </button>
+                  <button type="button" className="btn btn--ghost btn--sm" disabled={busy}
+                    onClick={() => { setNeedsMfa(false); setMfaCode(''); pendingAction.current = null; }}>
+                    إلغاء
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                لم تُفعّل المصادقة الثنائية بعد. فعّلها أولًا من{' '}
+                <Link to="/account">صفحة الأمان</Link> ثم أعد المحاولة — لا يمكن حفظ الشعار دونها.
+              </>
+            )}
+          </div>
+        ) : null}
+
         <p style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 0, marginTop: 14 }}>
-          يظهر الشعار تلقائيًا في: شاشة الدخول، الشريط الجانبي، الهيدر على الجوال، أيقونة المتصفح والتطبيق،
+          يظهر الشعار تلقائيًا في: شاشة الدخول، الشريط الجانبي، الهيدر على الجوال،
           ترويسة التقارير، وصفحات الطباعة/PDF. تغيير الشعار عملية حساسة تتطلب AAL2 وتُسجَّل في سجل التدقيق.
         </p>
       </div>
