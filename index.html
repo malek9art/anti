@@ -24,10 +24,11 @@
         display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px;
       }
       #boot .boot-logo {
-        width: 72px; height: 72px; border-radius: 16px;
-        background: #C9A24D; display: flex; align-items: center; justify-content: center;
-        font-size: 30px; font-weight: 800; color: #0B3D2E;
+        width: 96px; height: 96px; border-radius: 50%;
+        background: #ffffff; display: flex; align-items: center; justify-content: center;
+        overflow: hidden; box-shadow: 0 6px 22px rgba(0,0,0,0.25);
       }
+      #boot .boot-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
       #boot .boot-title { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
       #boot .boot-sub { font-size: 14px; color: rgba(255,255,255,0.75); }
       #boot .boot-spinner {
@@ -54,7 +55,7 @@
     <a class="skip-link" href="#main">تخطٍّ إلى المحتوى الرئيسي</a>
     <div id="boot" role="status" aria-live="polite">
       <div class="boot-card">
-        <div class="boot-logo">ح</div>
+        <div class="boot-logo"><img src="./logo.png" alt="" onerror="this.parentNode.textContent='ح'" /></div>
         <div class="boot-title">حماية</div>
         <div class="boot-sub">نظام مكافحة سرقة الأجهزة</div>
         <div class="boot-spinner" aria-hidden="true"></div>
