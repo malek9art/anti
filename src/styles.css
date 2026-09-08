@@ -91,6 +91,14 @@ a { color: var(--green-700); }
 .topbar__logo img { width: 34px; height: 34px; object-fit: contain; }
 .topbar__title { font-weight: 700; font-size: 17px; margin: 0; }
 .topbar__spacer { flex: 1; }
+.topbar__bell { position: relative; font-size: 17px; padding: 6px 10px; }
+.topbar__bell-badge {
+  position: absolute; top: 0; inset-inline-start: 0;
+  background: var(--danger); color: #fff; font-size: 10.5px; font-weight: 700;
+  min-width: 18px; height: 18px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center; padding: 0 4px;
+  border: 2px solid var(--white);
+}
 .topbar__user { text-align: start; font-size: 12.5px; color: var(--muted); }
 .topbar__user strong { display: block; color: var(--ink); font-size: 14px; }
 
