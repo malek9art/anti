@@ -43,7 +43,7 @@ export function BrandingManager() {
       // 2) الرفع المباشر إلى التخزين بالرمز الموقّع
       const { error: upErr } = await supabase.storage
         .from('branding')
-        .uploadToSignedUrl(path, token, file, { contentType: file.type, upsert: true });
+        .uploadToSignedUrl(path, token, file, { contentType: file.type });
       if (upErr) throw new Error(upErr.message);
 
       // 3) تثبيت المسار في إعدادات النظام مع رفع رقم الإصدار
@@ -141,7 +141,7 @@ export function BrandingManager() {
         </div>
 
         <p style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 0, marginTop: 14 }}>
-          يظهر الشعار تلقائيًا في: شاشة الدخول، الشريط الجانبي، الهيدر على الجوال،
+          يظهر الشعار تلقائيًا في: شاشة الدخول، الشريط الجانبي، الهيدر على الجوال، أيقونة المتصفح والتطبيق،
           ترويسة التقارير، وصفحات الطباعة/PDF. تغيير الشعار عملية حساسة تتطلب AAL2 وتُسجَّل في سجل التدقيق.
         </p>
       </div>
