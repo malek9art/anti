@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useApi } from '../lib/useApi';
 import { callFunction, errorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -35,6 +35,10 @@ export function Users() {
 
       {msg ? <div className="alert alert--ok" role="status">{msg}</div> : null}
       {error ? <div className="alert alert--error" role="alert">{error}</div> : null}
+
+      <CreateUserCard busy={busy} onCreate={async (payload) => {
+        await act('create-user', payload, 'تم إنشاء المستخدم وتفعيله بنجاح');
+      }} />
 
       <section className="card">
         <div className="card__head"><h2>قائمة المستخدمين</h2></div>
@@ -92,6 +96,88 @@ export function Users() {
           onSave={(roles) => void act('set-user-roles', { user_id: editing.id, roles }, 'تم تحديث الأدوار')} />
       ) : null}
     </>
+  );
+}
+
+function CreateUserCard({ busy, onCreate }: {
+  busy: boolean;
+  onCreate: (payload: Record<string, unknown>) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [roles, setRoles] = useState<string[]>([]);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const toggleRole = (r: string) =>
+    setRoles((s) => (s.includes(r) ? s.filter((x) => x !== r) : [...s, r]));
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    if (fullName.trim().length < 3) { setFormError('الاسم الكامل مطلوب (3 أحرف على الأقل)'); return; }
+    if (!email.trim().includes('@')) { setFormError('بريد إلكتروني غير صالح'); return; }
+    if (password.length < 10) { setFormError('كلمة المرور يجب أن تكون 10 أحرف على الأقل'); return; }
+    if (roles.length === 0) { setFormError('اختر دورًا واحدًا على الأقل'); return; }
+    await onCreate({ full_name: fullName.trim(), email: email.trim(), password, roles });
+    setFullName(''); setEmail(''); setPassword(''); setRoles([]); setOpen(false);
+  }
+
+  return (
+    <section className="card" style={{ marginBottom: 16 }}>
+      <div className="card__head">
+        <h2>إنشاء مستخدم جديد</h2>
+        <span style={{ flex: 1 }} />
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}>
+          {open ? 'إخفاء النموذج' : '➕ مستخدم جديد'}
+        </button>
+      </div>
+      {open ? (
+        <div className="card__body">
+          {formError ? <div className="alert alert--error" role="alert">{formError}</div> : null}
+          <form onSubmit={(e) => void submit(e)} noValidate>
+            <div className="row">
+              <div className="field">
+                <label htmlFor="cu-name">الاسم الكامل</label>
+                <input id="cu-name" value={fullName} onChange={(e) => setFullName(e.target.value)}
+                  autoComplete="off" required />
+              </div>
+              <div className="field">
+                <label htmlFor="cu-email">البريد الإلكتروني</label>
+                <input id="cu-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="off" dir="ltr" required />
+              </div>
+              <div className="field">
+                <label htmlFor="cu-pass">كلمة المرور المؤقتة</label>
+                <input id="cu-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password" required />
+                <div className="hint">10 أحرف على الأقل — يُنصح بأن يغيّرها المستخدم بعد أول دخول.</div>
+              </div>
+            </div>
+            <fieldset style={{ border: 0, padding: 0, margin: '0 0 14px' }}>
+              <legend style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 6 }}>الأدوار</legend>
+              <div className="row">
+                {Object.entries(ROLE_AR).map(([code, label]) => (
+                  <label key={code} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="checkbox" style={{ width: 18 }} checked={roles.includes(code)}
+                      onChange={() => toggleRole(code)} />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <button type="submit" className="btn" disabled={busy}>
+              {busy ? 'جارٍ الإنشاء…' : 'إنشاء وتفعيل المستخدم'}
+            </button>
+            <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 10 }}>
+              يُنشأ الحساب مفعّلًا ببريد مؤكَّد فورًا لأن الإدارة هي من أنشأه، وتُسجَّل العملية في سجل التدقيق.
+            </p>
+          </form>
+        </div>
+      ) : null}
+    </section>
   );
 }
 

@@ -57,6 +57,45 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
     document.documentElement.style.setProperty('--gold-500', value.accentColor);
   }, [value.primaryColor, value.accentColor]);
 
+  // ربط الشعار المرفوع بكل مواضع الهوية: أيقونة التبويب، أيقونة آبل، وأيقونة التطبيق المثبَّت (manifest ديناميكي)
+  useEffect(() => {
+    const setLink = (rel: string, href: string) => {
+      let el = document.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
+      if (!el) {
+        el = document.createElement('link');
+        el.rel = rel;
+        document.head.appendChild(el);
+      }
+      el.href = href;
+    };
+    setLink('icon', value.logoUrl);
+    setLink('apple-touch-icon', value.logoUrl);
+
+    let manifestUrl: string | null = null;
+    if (value.isCustom) {
+      const manifest = {
+        name: document.title || 'حماية',
+        short_name: 'حماية',
+        start_url: '.',
+        display: 'standalone',
+        dir: 'rtl',
+        lang: 'ar',
+        background_color: value.primaryColor,
+        theme_color: value.primaryColor,
+        icons: [
+          { src: value.logoUrl, sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: value.logoUrl, sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: value.logoUrl, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      };
+      manifestUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
+      setLink('manifest', manifestUrl);
+    }
+    const themeMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (themeMeta) themeMeta.content = value.primaryColor;
+    return () => { if (manifestUrl) URL.revokeObjectURL(manifestUrl); };
+  }, [value.logoUrl, value.isCustom, value.primaryColor]);
+
   return <BrandingContext.Provider value={value}>{children}</BrandingContext.Provider>;
 }
 
