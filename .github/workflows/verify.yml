@@ -1,0 +1,24 @@
+name: التحقق من الجودة
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: بوابة الجودة الكاملة
+        run: npm run verify
+        env:
+          # لا تحقن مسارًا مطلقًا: الحزمة مبنية بأصول نسبية (./) وتعمل تحت أي مسار أساس.
+          # الحقن بـ /<repo>/ يُفشل فحص check-pwa (المسارات المطلقة ممنوعة).
+          VITE_ROUTER_MODE: hash
