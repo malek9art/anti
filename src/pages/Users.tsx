@@ -10,9 +10,20 @@ interface UserRow {
   mfa_enrolled: boolean; roles: string[]; created_at: string;
 }
 
+interface SignupRequestRow {
+  id: string; user_id: string; full_name: string; email: string; phone: string | null;
+  requested_role: string; payload: Record<string, string>; created_at: string;
+}
+
+const PAYLOAD_LABELS: Record<string, string> = {
+  shop_name: 'المحل', shop_address: 'العنوان', commercial_register: 'سجل تجاري',
+  workplace: 'يعمل لدى', agency: 'الجهة',
+};
+
 export function Users() {
   const { can } = useAuth();
   const list = useApi<UserRow[]>('get-users', { limit: 100 });
+  const requests = useApi<SignupRequestRow[]>('get-signup-requests', { limit: 100 });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +31,7 @@ export function Users() {
 
   async function act(fn: string, body: Record<string, unknown>, success: string) {
     setBusy(true); setError(null); setMsg(null);
-    try { await callFunction(fn, body); setMsg(success); list.reload(); setEditing(null); }
+    try { await callFunction(fn, body); setMsg(success); list.reload(); requests.reload(); setEditing(null); }
     catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   }
 
@@ -39,6 +50,57 @@ export function Users() {
       <CreateUserCard busy={busy} onCreate={async (payload) => {
         await act('create-user', payload, 'تم إنشاء المستخدم وتفعيله بنجاح');
       }} />
+
+      <section className="card" style={{ marginBottom: 16 }}>
+        <div className="card__head">
+          <h2>طلبات التفعيل الواردة {requests.data && requests.data.length > 0 ? `(${requests.data.length})` : ''}</h2>
+          <span style={{ flex: 1 }} />
+          <button type="button" className="btn btn--ghost btn--sm" onClick={requests.reload}>تحديث</button>
+        </div>
+        <div className="card__body">
+          {requests.loading ? <LoadingState /> : null}
+          {requests.error ? <ErrorState message={requests.error} onRetry={requests.reload} /> : null}
+          {requests.data && requests.data.length === 0 ? (
+            <EmptyState title="لا توجد طلبات تفعيل بانتظار المراجعة" />
+          ) : null}
+          {(requests.data ?? []).map((r) => (
+            <div key={r.id} className="request-card">
+              <div className="request-card__info">
+                <div style={{ fontWeight: 700 }}>{r.full_name}
+                  <span className="badge badge--warn" style={{ marginInlineStart: 8 }}>
+                    {ROLE_AR[r.requested_role] ?? r.requested_role}
+                  </span>
+                </div>
+                <div className="request-card__meta">
+                  <span dir="ltr">{r.email}</span>
+                  {r.phone ? <span dir="ltr">📞 {r.phone}</span> : null}
+                  <span>{formatDate(r.created_at)}</span>
+                </div>
+                {Object.entries(r.payload ?? {}).filter(([, v]) => v).length > 0 ? (
+                  <div className="request-card__meta">
+                    {Object.entries(r.payload).filter(([, v]) => v).map(([k, v]) => (
+                      <span key={k}>{PAYLOAD_LABELS[k] ?? k}: {v}</span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                <button type="button" className="btn btn--sm" disabled={busy}
+                  onClick={() => void act('approve-signup', { request_id: r.id }, `تمت الموافقة على ${r.full_name} وتفعيل حسابه`)}>
+                  موافقة
+                </button>
+                <button type="button" className="btn btn--sm btn--danger" disabled={busy}
+                  onClick={() => {
+                    const reason = window.prompt('سبب الرفض (سيظهر في سجل التدقيق):') ?? '';
+                    void act('reject-signup', { request_id: r.id, reason }, `تم رفض طلب ${r.full_name}`);
+                  }}>
+                  رفض
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="card">
         <div className="card__head"><h2>قائمة المستخدمين</h2></div>
