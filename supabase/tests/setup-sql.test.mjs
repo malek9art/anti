@@ -16,6 +16,7 @@ create or replace function extensions.digest(p_data text, p_type text) returns b
   language sql immutable as $fn$ select decode(md5(p_data) || md5(md5(p_data) || p_type), 'hex') $fn$;
 create table if not exists auth.users (
   id uuid primary key default gen_random_uuid(), email text unique,
+  email_confirmed_at timestamptz,
   created_at timestamptz not null default now());
 create or replace function auth.uid() returns uuid language sql stable
   as $fn$ select nullif(current_setting('test.user_id', true), '')::uuid $fn$;
