@@ -23,89 +23,10 @@ const BrandingContext = createContext<Branding | null>(null);
 
 export function buildLogoUrl(path: string, version: string): string {
   if (!path) return FALLBACK_LOGO;
+  // رابط مطلق (مثل Edge Function) يُستخدم كما هو مع كسر التخزين المؤقت
+  if (/^https?:\/\//i.test(path)) {
+    return `${path}${path.includes('?') ? '&' : '?'}v=${version}`;
+  }
   // دلو branding عام، لذا يمكن بناء رابط مباشر مع كسر التخزين المؤقت
   return `${SUPABASE_URL}/storage/v1/object/public/branding/${path}?v=${version}`;
-}
-
-export function BrandingProvider({ children }: { children: ReactNode }) {
-  const [payload, setPayload] = useState<BrandingPayload | null>(null);
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    let alive = true;
-    callFunction<BrandingPayload>('get-branding')
-      .then((res) => { if (alive) setPayload(res); })
-      .catch(() => { if (alive) setPayload(null); });
-    return () => { alive = false; };
-  }, [tick]);
-
-  const reload = useCallback(() => setTick((t) => t + 1), []);
-
-  const value = useMemo<Branding>(() => {
-    const path = payload?.logo_path ?? '';
-    return {
-      logoUrl: buildLogoUrl(path, payload?.logo_version ?? '0'),
-      primaryColor: payload?.primary_color || '#0B3D2E',
-      accentColor: payload?.accent_color || '#C9A24D',
-      isCustom: Boolean(path),
-      reload,
-    };
-  }, [payload, reload]);
-
-  useEffect(() => {
-    document.documentElement.style.setProperty('--green-800', value.primaryColor);
-    document.documentElement.style.setProperty('--gold-500', value.accentColor);
-  }, [value.primaryColor, value.accentColor]);
-
-  // ربط الشعار المرفوع بكل مواضع الهوية: أيقونة التبويب، أيقونة آبل، وأيقونة التطبيق المثبَّت (manifest ديناميكي)
-  useEffect(() => {
-    const setLink = (rel: string, href: string) => {
-      let el = document.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
-      if (!el) {
-        el = document.createElement('link');
-        el.rel = rel;
-        document.head.appendChild(el);
-      }
-      el.href = href;
-    };
-    setLink('icon', value.logoUrl);
-    setLink('apple-touch-icon', value.logoUrl);
-
-    let manifestUrl: string | null = null;
-    if (value.isCustom) {
-      const manifest = {
-        name: document.title || 'حماية',
-        short_name: 'حماية',
-        start_url: '.',
-        display: 'standalone',
-        dir: 'rtl',
-        lang: 'ar',
-        background_color: value.primaryColor,
-        theme_color: value.primaryColor,
-        icons: [
-          { src: value.logoUrl, sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: value.logoUrl, sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: value.logoUrl, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-        ],
-      };
-      manifestUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
-      setLink('manifest', manifestUrl);
-    }
-    const themeMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-    if (themeMeta) themeMeta.content = value.primaryColor;
-    return () => { if (manifestUrl) URL.revokeObjectURL(manifestUrl); };
-  }, [value.logoUrl, value.isCustom, value.primaryColor]);
-
-  return <BrandingContext.Provider value={value}>{children}</BrandingContext.Provider>;
-}
-
-export function useBranding(): Branding {
-  const ctx = useContext(BrandingContext);
-  if (!ctx) {
-    return {
-      logoUrl: FALLBACK_LOGO, primaryColor: '#0B3D2E', accentColor: '#C9A24D',
-      isCustom: false, reload: () => undefined,
-    };
-  }
-  return ctx;
 }
